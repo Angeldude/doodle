@@ -5,10 +5,10 @@ sealed trait Image {
     Beside(this, right)
 
   def on(bottom: Image): Image =
-    Overlay(this, bottom)
+    On(this, bottom)
 
   def under(top: Image): Image =
-    Overlay(top, this)
+    On(top, this)
 
   def above(bottom: Image): Image =
     Above(this, bottom)
@@ -39,15 +39,26 @@ sealed trait Image {
   lazy val boundingBox: BoundingBox =
     BoundingBox(this)
 }
+object Image {
 
+  // Smart constructors
+
+  def circle(r: Double): Image =
+    Circle(r)
+
+  def rectangle(w: Double, h: Double): Image =
+    Rectangle(w,h)
+
+  def triangle(w: Double, h: Double): Image =
+    Triangle(w,h)
+}
 final case class Path(elements: Seq[PathElement]) extends Image
 final case class Circle(r: Double) extends Image
 final case class Rectangle(w: Double, h: Double) extends Image
 final case class Triangle(w: Double, h: Double) extends Image
 final case class Beside(l: Image, r: Image) extends Image
 final case class Above(l: Image, r: Image) extends Image
-final case class Overlay(t: Image, b: Image) extends Image
+final case class On(t: Image, b: Image) extends Image
 final case class At(at: Vec, i: Image) extends Image
 final case class ContextTransform(f: DrawingContext => DrawingContext, image: Image) extends Image
-trait Drawable extends Image { def image: Image }
-case object Empty extends Image
+final case object Empty extends Image
