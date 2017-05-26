@@ -1,7 +1,20 @@
 package doodle.core
 
-sealed abstract class PathElement extends Product with Serializable
+sealed abstract class PathElement extends Product with Serializable {
+  import PathElement._
+
+  def transform(tx: doodle.core.transform.Transform): PathElement =
+    this match {
+      case MoveTo(to) => MoveTo(tx(to))
+      case LineTo(to) => LineTo(tx(to))
+      case BezierCurveTo(cp1, cp2, to) => BezierCurveTo(tx(cp1), tx(cp2), tx(to))
+    }
+}
 object PathElement {
+  final case class MoveTo(to: Point) extends PathElement
+  final case class LineTo(to: Point) extends PathElement
+  final case class BezierCurveTo(cp1: Point, cp2: Point, to: Point) extends PathElement
+
   def moveTo(point: Point): PathElement =
     MoveTo(point)
 
@@ -39,6 +52,3 @@ object PathElement {
     )
 
 }
-final case class MoveTo(to: Point) extends PathElement
-final case class LineTo(to: Point) extends PathElement
-final case class BezierCurveTo(cp1: Point, cp2: Point, to: Point) extends PathElement

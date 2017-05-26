@@ -4,15 +4,17 @@ import doodle.core._
 import doodle.syntax._
 
 object Koch {
+  import PathElement._
+
   def kochElements(depth: Int, start: Point, angle: Angle, length: Double): Seq[PathElement] = {
     if(depth == 0) {
-      Seq(LineTo(start + Vec.polar(angle, length)))
+      Seq(lineTo(start + Vec.polar(length, angle)))
     } else {
       val lAngle = angle - 60.degrees
       val rAngle = angle + 60.degrees
 
       val third  = length / 3.0
-      val edge   = Vec.polar(angle, third)
+      val edge   = Vec.polar(third, angle)
 
       val mid1 = start + edge
       val mid2 = mid1 + edge.rotate(-60.degrees)
@@ -28,7 +30,7 @@ object Koch {
 
   def koch(depth: Int, length: Double): Image = {
     val origin = Point.cartesian(0, length/6)
-    OpenPath(MoveTo(origin) +: kochElements(depth, origin, 0.degrees, length))
+    Image.openPath(moveTo(origin) +: kochElements(depth, origin, 0.degrees, length))
   }
 
   val image = allAbove((1 to 4) map { depth =>

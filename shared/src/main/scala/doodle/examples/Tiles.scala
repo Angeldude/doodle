@@ -5,11 +5,13 @@ import doodle.core._
 import doodle.syntax._
 import doodle.random._
 
-import cats.std.list._
+import cats.instances.list._
 import cats.syntax.cartesian._
 import cats.syntax.traverse._
 
 object Tiles {
+  import PathElement._
+
   // Experiments generating tiles
 
   def randomColor(meanHue: Angle): Random[Color] =
@@ -27,7 +29,7 @@ object Tiles {
       pt1 <- point
       pt2 <- point
       pt3 <- point
-    } yield ClosedPath(Seq(MoveTo(pt1), LineTo(pt2), LineTo(pt3), LineTo(pt1)))
+    } yield Image.closedPath(Seq(moveTo(pt1), lineTo(pt2), lineTo(pt3), lineTo(pt1)))
   }
 
   val leafGreen: Random[Color] = randomColor(80.degrees)

@@ -1,20 +1,23 @@
-version in ThisBuild := "0.6.5"
+version in ThisBuild := "0.7.0"
 
-val catsVersion = "0.6.0"
+val catsVersion = "0.9.0"
+
+scalaVersion in ThisBuild := "2.12.1"
 
 lazy val doodle = crossProject.
   crossType(DoodleCrossType).
   settings(
     name          := "doodle",
     organization  := "underscoreio",
-    scalaVersion  := "2.11.8",
-    scalacOptions ++= Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked", "-Ywarn-unused-import"),
-    scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked"),
+    scalaVersion  := "2.12.1",
+    scalaOrganization := "org.typelevel",
+    scalacOptions ++= Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked", "-Ywarn-unused-import", "-Ypartial-unification"),
+    scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked", "-Ypartial-unification"),
     licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0")),
     libraryDependencies ++= Seq(
        "org.typelevel" %% "cats" % catsVersion,
-       "org.scalatest" %% "scalatest" % "2.2.6" % "test",
-       "org.scalacheck" %% "scalacheck" % "1.12.5" % "test"
+       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+       "org.scalacheck" %% "scalacheck" % "1.12.4" % "test"
     )
   ).jvmSettings(
     libraryDependencies ++= Seq(
@@ -29,8 +32,8 @@ lazy val doodle = crossProject.
       |import doodle.core.Image._
       |import doodle.random._
       |import doodle.syntax._
-      |import doodle.jvm.FileCanvas._
-      |import doodle.jvm.Java2DCanvas._
+      |import doodle.jvm.FileFrame._
+      |import doodle.jvm.Java2DFrame._
       |import doodle.backend.StandardInterpreter._
       |import doodle.backend.Formats._
       |import doodle.examples._
@@ -46,14 +49,11 @@ lazy val doodle = crossProject.
     bootSnippet             := """
       |doodle.ScalaJSExample().main();
     """.trim.stripMargin,
-    testFrameworks          += new TestFramework("utest.runner.Framework"),
     //refreshBrowsers <<= refreshBrowsers.triggeredBy(packageJS in Compile)
     libraryDependencies ++= Seq(
-      "org.typelevel"             %%% "cats"        % catsVersion,
-      "org.scala-js"              %%% "scalajs-dom" % "0.9.0",
-      "com.lihaoyi"               %%% "scalatags"   % "0.5.5",
-      "com.lihaoyi"               %%% "utest"       % "0.3.0" % "test",
-      "com.github.japgolly.nyaya" %%% "nyaya-test"  % "0.5.3" % "test"
+      "org.typelevel" %%% "cats"        % catsVersion,
+      "org.scala-js"  %%% "scalajs-dom" % "0.9.2",
+      "com.lihaoyi"   %%% "scalatags"   % "0.6.3"
     )
   )
 

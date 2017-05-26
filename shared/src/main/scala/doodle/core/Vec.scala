@@ -6,6 +6,9 @@ final case class Vec(x: Double, y: Double) {
   def +(that: Vec): Vec = Vec(this.x + that.x, this.y + that.y)
   def -(that: Vec): Vec = Vec(this.x - that.x, this.y - that.y)
 
+  def unary_- : Vec =
+    Vec(-x, -y)
+
   def *(d: Double): Vec = Vec(x*d, y*d)
   def /(d: Double): Vec = Vec(x/d, y/d)
 
@@ -22,7 +25,7 @@ final case class Vec(x: Double, y: Double) {
   }
 
   def rotate(by: Angle): Vec =
-    Vec.polar(this.angle + by, this.length)
+    Vec.polar(this.length, this.angle + by)
 
   def dot(that: Vec): Double =
     this.x * that.x + this.y * that.y
@@ -41,8 +44,8 @@ object Vec {
   val unitY = Vec(0, 1)
 
   def polar(angle: Angle): Vec =
-    polar(angle, 1.0)
+    polar(1.0, angle)
 
-  def polar(angle: Angle, len: Double): Vec =
-    Vec(len * angle.cos, len * angle.sin)
+  def polar(r: Double, angle: Angle): Vec =
+    Vec(r * angle.cos, r * angle.sin)
 }

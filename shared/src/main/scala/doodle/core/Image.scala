@@ -4,6 +4,10 @@ package core
 import doodle.core.font.Font
 
 sealed abstract class Image extends Product with Serializable {
+  import Image._
+
+  // Layout ----------------------------------------------------------
+
   def beside(right: Image): Image =
     Beside(this, right)
 
@@ -19,11 +23,8 @@ sealed abstract class Image extends Product with Serializable {
   def below(top: Image): Image =
     Above(top, this)
 
-  def at(vec: Vec): Image =
-    At(vec, this)
 
-  def at(x: Double, y: Double): Image =
-    At(Vec(x, y), this)
+  // Context Transform ------------------------------------------------
 
   def lineColor(color: Color): Image =
     ContextTransform(_.lineColor(color), this)
@@ -48,25 +49,99 @@ sealed abstract class Image extends Product with Serializable {
 
   def font(font: Font): Image =
     ContextTransform(_.font(font), this)
+
+
+  // Affine Transform -------------------------------------------------
+
+  def transform(tx: core.transform.Transform): Image =
+    Transform(tx, this)
+
+  def rotate(angle: Angle): Image =
+    this.transform(core.transform.Transform.rotate(angle))
+
+  def at(vec: Vec): Image =
+    Transform(core.transform.Transform.translate(vec.x, vec.y), this)
+
+  def at(x: Double, y: Double): Image =
+    Transform(core.transform.Transform.translate(x, y), this)
+}
+sealed abstract class Path extends Image {
+  import Image._
+
+  def isOpen: Boolean =
+    this match {
+      case OpenPath(_)   => true
+      case ClosedPath(_) => false
+    }
+
+  def isClosed: Boolean =
+    !this.isOpen
+
+  def open: Path =
+    this match {
+      case OpenPath(_)      => this
+      case ClosedPath(elts) => OpenPath(elts)
+    }
+
+  def close: Path =
+    this match {
+      case OpenPath(elts) => ClosedPath(elts)
+      case ClosedPath(_)  => this
+    }
 }
 object Image {
+  final case class OpenPath(elements: List[PathElement]) extends Path
+  final case class ClosedPath(elements: List[PathElement]) extends Path
+  final case class Text(get: String) extends Image
+  final case class Circle(r: Double) extends Image
+  final case class Rectangle(w: Double, h: Double) extends Image
+  final case class Triangle(w: Double, h: Double) extends Image
+  final case class Beside(l: Image, r: Image) extends Image
+  final case class Above(l: Image, r: Image) extends Image
+  final case class On(t: Image, b: Image) extends Image
+  final case class Transform(tx: transform.Transform, i: Image) extends Image
+  final case class ContextTransform(f: DrawingContext => DrawingContext, image: Image) extends Image
+  final case object Empty extends Image
 
   // Smart constructors
 
-  def closedPath(elements: Seq[PathElement]): Image =
-    ClosedPath(elements)
+  def closedPath(elements: Seq[PathElement]): Path = {
+    // Paths must start at the origin. Thus we always move to the origin to
+    // start.
+    ClosedPath((PathElement.moveTo(0,0) +: elements).toList)
+  }
 
-  def openPath(elements: Seq[PathElement]): Image =
-    OpenPath(elements)
+
+  def openPath(elements: Seq[PathElement]): Path = {
+    // Paths must start at the origin. Thus we always move to the origin to
+    // start.
+    OpenPath((PathElement.moveTo(0,0) +: elements).toList)
+  }
 
   def text(characters: String): Image =
     Text(characters)
+
+  def line(x: Double, y: Double): Image = {
+    val startX = -x/2
+    val startY = -y/2
+    val endX = x/2
+    val endY = y/2
+    openPath(
+      List(
+        PathElement.moveTo(startX, startY),
+        PathElement.lineTo(endX, endY)
+      )
+    )
+  }
 
   def circle(r: Double): Image =
     Circle(r)
 
   def rectangle(w: Double, h: Double): Image =
     Rectangle(w,h)
+
+  def square(side: Double): Image =
+    rectangle(side, side)
 
   def regularPolygon(sides: Int, radius: Double, angle: Angle): Image = {
     import PathElement._
@@ -163,19 +238,18 @@ object Image {
   def interpolatingSpline(points: Seq[Point]): Path =
     catmulRom(points)
 
-  /*
-   * Interpolate a spline (a curve) that passes through all the given points,
-   * using the Catmul Rom formulation (see, e.g.,
-   * https://en.wikipedia.org/wiki/Cubic_Hermite_spline)
-   *
-   * The tension can be changed to control how tightly the curve turns. It defaults to 0.5.
-   *
-   * The Catmul Rom algorithm requires a point before and after each pair of
-   * points that define the curve. To meet this condition for the first and last
-   * points in `points`, they are repeated.
-   *
-   * In `points` has less than two elements an empty `Path` is returned.
-   */
+  /**
+    * Interpolate a spline (a curve) that passes through all the given points,
+    * using the Catmul Rom formulation (see, e.g., https://en.wikipedia.org/wiki/Cubic_Hermite_spline)
+    *
+    * The tension can be changed to control how tightly the curve turns. It defaults to 0.5.
+    *
+    * The Catmul Rom algorithm requires a point before and after each pair of
+    * points that define the curve. To meet this condition for the first and last
+    * points in `points`, they are repeated.
+    *
+    * If `points` has less than two elements an empty `Path` is returned.
+    */
   def catmulRom(points: Seq[Point], tension: Double = 0.5): Path = {
     /*
     To convert Catmul Rom curve to a Bezier curve, multiply points by (invB * catmul)
@@ -213,62 +287,28 @@ object Image {
       )
 
 
-    def iter(points: Seq[Point]): Seq[PathElement] = {
+    def iter(points: List[Point]): List[PathElement] = {
       points match {
-        case pt0 +: pt1 +: pt2 +: pt3 +: pts =>
+        case pt0 :: pt1 :: pt2 :: pt3 :: pts =>
           toCurve(pt0, pt1, pt2, pt3) +: iter(pt1 +: pt2 +: pt3 +: pts)
 
-        case pt0 +: pt1 +: pt2 +: Seq() =>
+        case pt0 :: pt1 :: pt2 :: Seq() =>
           // Case where we've reached the end of the sequence of points
           // We repeat the last point
           val pt3 = pt2
-          Seq(toCurve(pt0, pt1, pt2, pt3))
+          List(toCurve(pt0, pt1, pt2, pt3))
 
         case _ =>
           // There were two or fewer points in the sequence
-          Seq.empty[PathElement]
+          List.empty[PathElement]
       }
     }
 
-    points.headOption.fold(OpenPath(Seq.empty)){ pt0 =>
-      OpenPath(PathElement.moveTo(pt0) +: iter(pt0 +: points))
+    points.headOption.fold(OpenPath(List.empty)){ pt0 =>
+      OpenPath(PathElement.moveTo(pt0) :: iter(pt0 :: points.toList))
     }
   }
 
   def empty: Image =
     Empty
 }
-sealed abstract class Path extends Image {
-  def isOpen: Boolean =
-    this match {
-      case OpenPath(_)   => true
-      case ClosedPath(_) => false
-    }
-
-  def isClosed: Boolean =
-    !this.isOpen
-
-  def open: Path =
-    this match {
-      case OpenPath(_)      => this
-      case ClosedPath(elts) => OpenPath(elts)
-    }
-
-  def close: Path =
-    this match {
-      case OpenPath(elts) => ClosedPath(elts)
-      case ClosedPath(_)  => this
-    }
-}
-final case class OpenPath(elements: Seq[PathElement]) extends Path
-final case class ClosedPath(elements: Seq[PathElement]) extends Path
-final case class Text(get: String) extends Image
-final case class Circle(r: Double) extends Image
-final case class Rectangle(w: Double, h: Double) extends Image
-final case class Triangle(w: Double, h: Double) extends Image
-final case class Beside(l: Image, r: Image) extends Image
-final case class Above(l: Image, r: Image) extends Image
-final case class On(t: Image, b: Image) extends Image
-final case class At(at: Vec, i: Image) extends Image
-final case class ContextTransform(f: DrawingContext => DrawingContext, image: Image) extends Image
-final case object Empty extends Image

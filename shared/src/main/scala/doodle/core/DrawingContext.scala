@@ -1,7 +1,7 @@
 package doodle
 package core
 
-import cats.std.option._
+import cats.instances.option._
 import cats.syntax.cartesian._
 
 import doodle.core.font.Font
@@ -48,7 +48,7 @@ final case class DrawingContext(
   def noFill: DrawingContext =
     this.copy(fillColor = None)
 
-  def font(font: Font) =
+  def font(font: Font): DrawingContext =
     this.copy(font = Some(font))
 }
 
